@@ -16,7 +16,8 @@ namespace StarCloudgamesLibrary
         protected float layoutSpacing;
         protected RectOffset padding;
         protected float elementSize;
-        protected int lastElementNumber;
+        protected int lastElementNumber = -1;
+        protected bool setup;
 
         private ScrollViewPool<TItem> itemPool;
         private bool initialized;
@@ -52,6 +53,9 @@ namespace StarCloudgamesLibrary
 
         public virtual void SetUp()
         {
+            if(setup) return;
+
+            setup = true;
             activatingItems = new List<TItem>();
 
             itemPool = new ScrollViewPool<TItem>(template, transform, itemPoolCount);

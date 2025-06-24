@@ -25,6 +25,8 @@ namespace StarCloudgamesLibrary
 
         public override void SetUp()
         {
+            if(setup) return;
+
             base.SetUp();
 
             if(scrollRect.content.TryGetComponent<HorizontalLayoutGroup>(out var layout))

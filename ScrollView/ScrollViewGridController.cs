@@ -29,6 +29,8 @@ namespace StarCloudgamesLibrary
 
         public override void SetUp()
         {
+            if(setup) return;
+
             base.SetUp();
 
             activatingSpaceItems = new List<LayoutElement>();
