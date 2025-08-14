@@ -55,37 +55,31 @@ namespace StarCloudgamesLibrary
 
         protected override void UpdateContent()
         {
-            // 한 줄로 행 수 계산 (버림 연산 없음)
-            int linesCount = (ItemDataCount() + constraintCount - 1) / constraintCount;
+            var totalElementsCount = ItemDataCount();
+            var linesCount = totalElementsCount % constraintCount > 0 ? totalElementsCount / constraintCount + 1 : totalElementsCount / constraintCount;
             AdjustContentSize(elementSize * linesCount);
 
-            // 스크롤 영역 내 보일 수 있는 최대 요소 수 계산
-            float scrollAreaSize = GetScrollAreaSize(scrollRect.viewport);
-            int visibleLines = Mathf.CeilToInt(scrollAreaSize / elementSize);
-            int visibleCount = (visibleLines + 1) * constraintCount;
+            var scrollAreaSize = GetScrollAreaSize(scrollRect.viewport);
+            var elementsVisibleInScrollArea = Mathf.CeilToInt(scrollAreaSize / elementSize) * constraintCount + constraintCount;
+            var elementsCulledAbove = Mathf.Clamp(Mathf.FloorToInt(GetScrollRectNormalizedPosition() * (linesCount * constraintCount - elementsVisibleInScrollArea)), 0,
+                Mathf.Clamp(totalElementsCount - (elementsVisibleInScrollArea + constraintCount), 0, int.MaxValue));
 
-            // 요소 스킵 (위쪽으로 제외할 요소 수 계산)
-            int maxSkippable = Mathf.Max(0, ItemDataCount() - visibleCount);
-            int totalScrollable = linesCount * constraintCount - visibleCount;
-            int elementsCulledAbove = Mathf.FloorToInt(GetScrollRectNormalizedPosition() * totalScrollable);
-
-            // 정렬 정합성 보장
-            elementsCulledAbove -= elementsCulledAbove % constraintCount;
-            elementsCulledAbove = Mathf.Min(elementsCulledAbove, maxSkippable);
+            if(elementsCulledAbove != totalElementsCount - (elementsVisibleInScrollArea + constraintCount))
+            {
+                elementsCulledAbove -= elementsCulledAbove % constraintCount;
+            }
 
             UpdateSpaceElement(elementsCulledAbove);
 
-            int requiredCount = Mathf.Min(visibleCount, ItemDataCount());
+            var requiredElementsInList = Mathf.Min(elementsVisibleInScrollArea + constraintCount, totalElementsCount);
 
-            if(activatingItems.Count != requiredCount)
+            if(activatingItems.Count != requiredElementsInList)
             {
-                InitializeItems(requiredCount, elementsCulledAbove);
+                InitializeItems(requiredElementsInList, elementsCulledAbove);
             }
             else if(lastElementNumber != elementsCulledAbove)
             {
-                var method = elementsCulledAbove > lastElementNumber ? ScrollDirection.TopToBottom : ScrollDirection.BottomToTop;
-
-                UpdateItem(method, elementsCulledAbove, false);
+                UpdateItem(elementsCulledAbove > lastElementNumber ? ScrollDirection.TopToBottom : ScrollDirection.BottomToTop, elementsCulledAbove, false);
             }
 
             lastElementNumber = elementsCulledAbove;
@@ -97,55 +91,39 @@ namespace StarCloudgamesLibrary
 
         protected override void UpdateItem(ScrollDirection direction, int itemNumber, bool updateAll)
         {
-            if(activatingItems.Count == 0 || itemNumber == lastElementNumber)
+            if(activatingItems.Count == 0)
             {
                 return;
             }
 
-            int shiftCount = Mathf.Abs(itemNumber - lastElementNumber);
-            int activeCount = activatingItems.Count;
+            var count = Mathf.Abs(itemNumber - lastElementNumber);
 
             if(direction == ScrollDirection.TopToBottom)
             {
-                for(int i = 0; i < shiftCount; i++)
+                for(var i = 0; i < count; i++)
                 {
                     var top = activatingItems[0];
                     activatingItems.RemoveAt(0);
                     activatingItems.Add(top);
 
-                    // 정렬 순서 보정
-                    if(activeCount >= 2)
+                    if(activatingItems.Count >= 2)
                     {
-                        int newIndex = activatingItems[activeCount - 2].transform.GetSiblingIndex() + 1;
-                        top.transform.SetSiblingIndex(newIndex);
+                        top.transform.SetSiblingIndex(activatingItems[activatingItems.Count - 2].transform.GetSiblingIndex() + 1);
                     }
 
-                    int dataIndex = itemNumber + activeCount - shiftCount + i;
-                    if(dataIndex < itemDatas.Count)
-                    {
-                        top.Data = itemDatas[dataIndex];
-                    }
+                    top.Data = itemDatas[itemNumber + (i + 1 - count) + activatingItems.Count - 1];
                 }
             }
-            else // BottomToTop
+            else
             {
-                for(int i = 0; i < shiftCount; i++)
+                for(var i = 0; i < count; i++)
                 {
-                    var bottom = activatingItems[activeCount - 1];
-                    activatingItems.RemoveAt(activeCount - 1);
+                    var bottom = activatingItems[activatingItems.Count - 1];
+                    activatingItems.RemoveAt(activatingItems.Count - 1);
                     activatingItems.Insert(0, bottom);
 
-                    if(activeCount >= 2)
-                    {
-                        int newIndex = activatingItems[1].transform.GetSiblingIndex();
-                        bottom.transform.SetSiblingIndex(newIndex);
-                    }
-
-                    int dataIndex = itemNumber - shiftCount + i;
-                    if(dataIndex >= 0 && dataIndex < itemDatas.Count)
-                    {
-                        bottom.Data = itemDatas[dataIndex];
-                    }
+                    bottom.transform.SetSiblingIndex(activatingItems[1].transform.GetSiblingIndex());
+                    bottom.Data = itemDatas[itemNumber - (i + 1 - count)];
                 }
             }
         }

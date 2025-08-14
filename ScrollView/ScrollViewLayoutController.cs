@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -29,7 +30,7 @@ namespace StarCloudgamesLibrary
 
             base.SetUp();
 
-            if(scrollRect.content.TryGetComponent<HorizontalLayoutGroup>(out var layout))
+            if(scrollRect.content.TryGetComponent<HorizontalOrVerticalLayoutGroup>(out var layout))
             {
                 layoutSpacing = layout.spacing;
                 padding = layout.padding;
@@ -56,10 +57,8 @@ namespace StarCloudgamesLibrary
             float scrollAreaSize = GetScrollAreaSize(scrollRect.viewport);
 
             int visibleCount = Mathf.CeilToInt(scrollAreaSize / elementSize);
-            int maxSkippable = Mathf.Max(0, ItemDataCount() - visibleCount);
-            int elementsCulledAbove = Mathf.FloorToInt(GetScrollRectNormalizedPosition() * (ItemDataCount() - visibleCount));
-            elementsCulledAbove = Mathf.Clamp(elementsCulledAbove, 0, maxSkippable);
-
+            var elementsCulledAbove = Mathf.Clamp(Mathf.FloorToInt(GetScrollRectNormalizedPosition() * (ItemDataCount() - visibleCount)), 0, Mathf.Clamp(ItemDataCount() - (visibleCount + 1), 0, int.MaxValue));
+            
             UpdateSpaceElement(elementsCulledAbove * elementSize);
 
             int requiredCount = Mathf.Min(visibleCount + 1, ItemDataCount());
@@ -86,7 +85,9 @@ namespace StarCloudgamesLibrary
         protected override void UpdateItem(ScrollDirection direction, int itemNumber, bool updateAll)
         {
             if(activatingItems.Count == 0)
+            {
                 return;
+            }
 
             if(direction == ScrollDirection.TopToBottom)
             {
@@ -96,54 +97,33 @@ namespace StarCloudgamesLibrary
 
                 if(activatingItems.Count >= 2)
                 {
-                    int newIndex = activatingItems[activatingItems.Count - 2].transform.GetSiblingIndex() + 1;
-                    top.transform.SetSiblingIndex(newIndex);
+                    top.transform.SetSiblingIndex(activatingItems[activatingItems.Count - 2].transform.GetSiblingIndex() + 1);
                 }
 
-                int topDataIndex = lastElementNumber + activatingItems.Count - 1;
-                if(topDataIndex < itemDatas.Count)
-                {
-                    top.Data = itemDatas[topDataIndex];
-                }
+                top.Data = itemDatas[itemNumber + activatingItems.Count - 1];
 
                 if(updateAll)
                 {
                     for(int i = 0; i < activatingItems.Count; i++)
                     {
-                        int dataIndex = lastElementNumber + i;
-                        if(dataIndex < itemDatas.Count)
-                        {
-                            activatingItems[i].Data = itemDatas[dataIndex];
-                        }
+                        activatingItems[i].Data = itemDatas[itemNumber + i];
                     }
                 }
             }
-            else // ScrollDirection.BottomToTop
+            else
             {
                 var bottom = activatingItems[activatingItems.Count - 1];
                 activatingItems.RemoveAt(activatingItems.Count - 1);
                 activatingItems.Insert(0, bottom);
 
-                if(activatingItems.Count >= 2)
-                {
-                    int newIndex = activatingItems[1].transform.GetSiblingIndex();
-                    bottom.transform.SetSiblingIndex(newIndex);
-                }
-
-                if(lastElementNumber < itemDatas.Count)
-                {
-                    bottom.Data = itemDatas[lastElementNumber];
-                }
+                bottom.transform.SetSiblingIndex(activatingItems[1].transform.GetSiblingIndex());
+                bottom.Data = itemDatas[itemNumber];
 
                 if(updateAll)
                 {
                     for(int i = 0; i < activatingItems.Count; i++)
                     {
-                        int dataIndex = lastElementNumber + i;
-                        if(dataIndex < itemDatas.Count)
-                        {
-                            activatingItems[i].Data = itemDatas[dataIndex];
-                        }
+                        activatingItems[i].Data = itemDatas[itemNumber + i];
                     }
                 }
             }
@@ -155,22 +135,24 @@ namespace StarCloudgamesLibrary
 
         protected override void UpdateSpaceElement(float size)
         {
-            bool isEmpty = size <= 0f;
-            spaceElement.ignoreLayout = isEmpty;
-
-            if(!isEmpty)
+            if(size <= 0)
             {
-                size -= layoutSpacing; // spacing Àû¿ë
+                spaceElement.ignoreLayout = true;
+            }
+            else
+            {
+                spaceElement.ignoreLayout = false;
+                size -= layoutSpacing;
             }
 
             if(scrollRect.vertical)
             {
-                spaceElement.minHeight = Mathf.Max(0f, size);
+                spaceElement.minHeight = size;
                 spaceElementRectTranstorm.sizeDelta = new Vector2(Screen.width, size);
             }
             else
             {
-                spaceElement.minWidth = Mathf.Max(0f, size);
+                spaceElement.minWidth = size;
                 spaceElementRectTranstorm.sizeDelta = new Vector2(size, Screen.height);
             }
 

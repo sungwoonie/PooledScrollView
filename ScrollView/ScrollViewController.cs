@@ -165,17 +165,22 @@ namespace StarCloudgamesLibrary
             var currentSize = scrollRect.content.sizeDelta;
             size -= layoutSpacing;
 
-            if(padding != null)
-            {
-                size += scrollRect.vertical ? (padding.top + padding.bottom) : (padding.left + padding.right);
-            }
-
             if(scrollRect.vertical)
             {
+                if(padding != null)
+                {
+                    size += padding.top + padding.bottom;
+                }
+
                 currentSize.y = size;
             }
             else
             {
+                if(padding != null)
+                {
+                    size += padding.left + padding.right;
+                }
+
                 currentSize.x = size;
             }
 
@@ -193,6 +198,11 @@ namespace StarCloudgamesLibrary
         #endregion
 
         #region "ScrollView Method"
+
+        public void UpdateActivatingItems()
+        {
+            activatingItems.ForEach(x => x.UpdateData());
+        }
 
         protected static LayoutElement CreateSpaceItem(ScrollRect scrollRect, float itemSize)
         {

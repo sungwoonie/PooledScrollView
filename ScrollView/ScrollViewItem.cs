@@ -22,5 +22,6 @@ namespace StarCloudgamesLibrary
 
         public abstract T Data { get; set; }
         public abstract void SetUp(T data);
+        public abstract void UpdateData();
     }
 }
